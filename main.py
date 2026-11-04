@@ -1,12 +1,24 @@
 import itertools
 import random
 from functools import reduce
+from typing import Literal
+
+red_suits = {'Hearts', 'Diamonds'}
+black_suits = {'Clubs', 'Spades'}
+
+Color = Literal['red', 'black']
+SuitName = Literal['Hearts', 'Diamonds', 'Clubs', 'Spades']
+
+class Suit:
+    def __init__(self, color: Color, name: SuitName):
+        self.color = color
+        self.name = name
 
 
 class Card:
-    def __init__(self, rank, suit, next=None, prev=None):
-        self.rank: int = rank
-        self.suit: str = suit
+    def __init__(self, rank: int, suit: str, next=None, prev=None):
+        self.rank = rank
+        self.suit = suit
         self.next: Card | None = next
         self.prev: Card | None = prev
 
@@ -18,13 +30,10 @@ class Card:
             if self.next.rank != self.rank - 1:
                 return False
 
-            red = {'Hearts', 'Diamonds'}
-            black = {'Clubs', 'Spades'}
-
-            if self.suit in red and self.next.suit in red:
+            if self.suit in red_suits and self.next.suit in red_suits:
                 return False
 
-            if self.suit in black and self.next.suit in black:
+            if self.suit in black_suits and self.next.suit in black_suits:
                 return False
 
             return True
@@ -57,12 +66,13 @@ class Card:
             return f'King of {self.suit}'
         return f'{self.rank} of {self.suit}'
 
+
 class Stack:
-    def __init__(self, type):
+    def __init__(self):
         # top card of the stack is the head, bottom is tail
         self.card_tail: Card | None = None
 
-    def can_add_card():
+    def can_add_card(self, card: Card) -> bool:
         return True
 
     def add_card(self, card):
@@ -76,11 +86,13 @@ class Stack:
             self.card_tail.next = card
             self.card_tail = card
 
+
 class Freecell(Stack):
     def can_add_card(self, card: Card):
-        if self.card_tail is not None or card.next is not None:
-            return False
-        return True
+        if self.card_tail is None and card.next is None:
+            return True
+        return False
+
 
 class Foundation(Stack):
     def can_add_card(self, card: Card):
@@ -91,25 +103,32 @@ class Foundation(Stack):
                 return True
         return False
 
+
 class Cascade(Stack):
     def can_add_card(self, card: Card):
-        return True
+        if self.card_tail is None:
+            return True
+        if self.card_tail.rank - 1 == card.rank:
+            if self.card_tail.suit in red_suits and card.suit in black_suits:
+                return True
+            if self.card_tail.suit in black_suits and card.suit in red_suits:
+                return True
+        return False
 
 
 class Game:
-    def __init__(self, game_type='normal'):
-        self.game_type = game_type
-        if game_type == 'normal':
-            self.foundations = [Stack('foundation') for _ in range(4)]
-            self.freecells = [Stack('freecell') for _ in range(4)]
-            self.cascades = [Stack('cascade') for _ in range(8)]
+    def __init__(self, number_of_suits=4, number_of_freecells=4, number_of_cascades=8):
+        self.foundations = [Foundation() for _ in range(number_of_suits)]
+        self.freecells = [Freecell() for _ in range(number_of_freecells)]
+        self.cascades = [Cascade() for _ in range(number_of_cascades)]
 
-            deck = list(itertools.product(
-                range(1, 13), ['Spades', 'Hearts', 'Diamonds', 'Clubs']))
-            random.shuffle(deck)
+    def deal(self):
+        deck = list(itertools.product(
+            range(1, 13), ['Spades', 'Hearts', 'Diamonds', 'Clubs']))
+        random.shuffle(deck)
 
-            for i, card in enumerate(deck):
-                self.cascades[i % 8].add_card(Card(card[0], card[1]))
+        for i, card in enumerate(deck):
+            self.cascades[i % 8].add_card(Card(card[0], card[1]))
 
     def calc_moveable_cards(self):
         open_freecells = reduce(lambda open_cells, stack: open_cells +
@@ -123,11 +142,14 @@ class Game:
         if not card.can_move(moveable_cards):
             return
 
+    def is_in_winning_state(self):
+        return False
 
-card = Card(1, 'Hearts')
-stack = Stack('foundation')
-stack.add_card(card)
-print(stack)
+class GameSansFoundations(Game):
+    pass
+
+class GameSansFreecells(Game):
+    pass
 
 # import itertools
 # import random
